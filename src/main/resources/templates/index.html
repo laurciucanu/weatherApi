@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather App</title>
+
+    <!-- PWA Meta Tags for iOS -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Weather App">
+    <link rel="apple-touch-icon" href="/static/dark_mode.jpg">
+
+    <!-- PWA Meta Tags for Android/Chrome -->
+    <meta name="theme-color" content="#007bff">
+    <link rel="manifest" href="/static/manifest.json">
+
+    <style>
+        :root {
+            --bg-color: #f0f2f5;
+            --container-bg: white;
+            --text-color: #333;
+            --input-border: #ddd;
+            --result-bg: #e9ecef;
+            --forecast-bg: #fff;
+            --forecast-border: #ddd;
+            --outlook-bg: #fff3cd;
+            --outlook-border: #ffeeba;
+            --button-bg: #007bff;
+            --button-hover: #0056b3;
+        }
+
+        body.dark-mode {
+            --bg-color: #1a1a1a;
+            --container-bg: #2d2d2d;
+            --text-color: #e0e0e0;
+            --input-border: #444;
+            --result-bg: #3d3d3d;
+            --forecast-bg: #3d3d3d;
+            --forecast-border: #444;
+            --outlook-bg: #3d3520;
+            --outlook-border: #5c543a;
+            --button-bg: #375a7f;
+            --button-hover: #2a4461;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            padding-top: 50px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        /* Theme Toggle Switch */
+        .theme-switch-wrapper {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--text-color);
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        .theme-switch {
+            display: inline-block;
+            height: 34px;
+            position: relative;
+            width: 60px;
+        }
+        .theme-switch input {
+            display: none;
+        }
+        .slider {
+            background-color: #ccc;
+            bottom: 0;
+            cursor: pointer;
+            left: 0;
+            position: absolute;
+            right: 0;
+            top: 0;
+            transition: .4s;
+            border-radius: 34px;
+        }
+        .slider:before {
+            background-color: white;
+            bottom: 4px;
+            content: "";
+            cursor: pointer;
+            height: 26px;
+            left: 4px;
+            position: absolute;
+            transition: .4s;
+            width: 26px;
+            z-index: 2;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: var(--button-bg);
+        }
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+
+        .container {
+            background: var(--container-bg);
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            width: 90%;
+            max-width: 600px;
+            transition: background-color 0.3s;
+        }
+        h1 { text-align: center; color: var(--text-color); }
+        form { display: flex; gap: 10px; margin-bottom: 20px; }
+        input {
+            flex-grow: 1;
+            padding: 10px;
+            border: 1px solid var(--input-border);
+            border-radius: 4px;
+            background: var(--container-bg);
+            color: var(--text-color);
+        }
+        button { padding: 10px 20px; background: var(--button-bg); color: white; border: none; border-radius: 4px; cursor: pointer; transition: background 0.3s; }
+        button:hover { background: var(--button-hover); }
+        .result { padding: 15px; border-radius: 4px; background: var(--result-bg); margin-bottom: 20px; color: var(--text-color); }
+        .error { color: #721c24; background-color: #f8d7da; padding: 10px; border-radius: 4px; border: 1px solid #f5c6cb; }
+
+        .forecast-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .forecast-card {
+            background: var(--forecast-bg);
+            border: 1px solid var(--forecast-border);
+            padding: 10px;
+            border-radius: 4px;
+            text-align: center;
+            font-size: 0.8rem;
+            color: var(--text-color);
+        }
+        .outlook {
+            margin-top: 20px;
+            padding: 15px;
+            background: var(--outlook-bg);
+            border-left: 5px solid var(--outlook-border);
+            font-style: italic;
+            font-size: 0.9rem;
+            color: var(--text-color);
+        }
+
+        @media (max-width: 480px) {
+            body { padding-top: 60px; }
+            form { flex-direction: column; }
+            .container { padding: 1rem; }
+            h1 { font-size: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="theme-switch-wrapper">
+        <span id="theme-label">Dark Mode</span>
+        <label class="theme-switch" for="checkbox">
+            <input type="checkbox" id="checkbox">
+            <div class="slider"></div>
+        </label>
+    </div>
+
+    <div class="container">
+        <h1>Weather App</h1>
+        <form action="/weather" method="POST">
+            <input type="text" name="city" placeholder="Enter city name..." required>
+            <button type="submit">Get Weather</button>
+        </form>
+
+        <div th:if="${error}" class="error" th:text="${error}">Error message</div>
+
+        <div th:if="${weather}" class="result">
+            <h2 th:text="${city_name} + ', ' + ${weather.sys.country}">City, Country</h2>
+            <p><strong>Temperature:</strong> <span th:text="${weather.main.temp}">0</span>°C</p>
+            <p><strong>Condition:</strong> <span th:text="${#strings.toUpperCase(#strings.substring(weather.weather[0].description,0,1))} + ${#strings.substring(weather.weather[0].description,1)}">Condition</span></p>
+            <p><strong>Humidity:</strong> <span th:text="${weather.main.humidity}">0</span>%</p>
+        </div>
+
+        <div th:if="${weather}" style="display: block;">
+            <h3 style="text-align: center;">5-Day Forecast</h3>
+            <div class="forecast-container">
+                <div th:each="day : ${forecast}" class="forecast-card">
+                    <strong th:text="${#strings.substring(day.dt_txt, 0, 10)}">Date</strong><br>
+                    <img th:src="'http://openweathermap.org/img/wn/' + ${day.weather[0].icon} + '.png'" alt="icon"><br>
+                    <span th:text="${day.main.temp}">0</span>°C<br>
+                    <span th:text="${day.weather[0].main}">Condition</span>
+                </div>
+            </div>
+        </div>
+
+        <div th:if="${weather}" class="outlook">
+            <strong>30-Day Outlook:</strong> <span th:text="${outlook}">Outlook</span>
+        </div>
+    </div>
+
+    <script>
+        const toggleSwitch = document.querySelector('#checkbox');
+        const themeLabel = document.getElementById('theme-label');
+        const body = document.body;
+
+        function switchTheme(x) {
+            if (x) {
+                body.classList.add('dark-mode');
+                localStorage.setItem('theme', 'dark');
+                themeLabel.textContent = 'Light Mode';
+            } else {
+                body.classList.remove('dark-mode');
+                localStorage.setItem('theme', 'light');
+                themeLabel.textContent = 'Dark Mode';
+            }
+        }
+
+        toggleSwitch.addEventListener('change', function(e) {
+            if(e.target.checked) {
+                switchTheme(true);
+            } else {
+                switchTheme(false);
+            }
+        });
+
+        const currentTheme = localStorage.getItem('theme');
+        if (currentTheme) {
+            if (currentTheme === 'dark') {
+                body.classList.add('dark-mode');
+                toggleSwitch.checked = true;
+                themeLabel.textContent = 'Light Mode';
+            } else {
+                body.classList.remove('dark-mode');
+                toggleSwitch.checked = false;
+                themeLabel.textContent = 'Dark Mode';
+            }
+        } else {
+            themeLabel.textContent = 'Dark Mode';
+        }
+
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/static/sw.js')
+                    .then(reg => console.log('SW registered!', reg))
+                    .catch(err => console.log('SW registration failed:', err));
+            });
+        }
+    </script>
+</body>
+</html>
